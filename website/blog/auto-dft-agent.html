@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoDFT：让 AI Agent 替你跑 VASP 计算 | Bija</title>
+<meta name="description" content="清华团队开源 AutoDFT——多 Agent 闭环 DFT 框架，94.1% VASP 任务成功率。深度解读：它怎么工作、能做什么、以及为什么这只是个开始。">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;color:#1a1a1a;line-height:1.9;background:#fafafa}
+nav{background:#fff;border-bottom:1px solid #eaeaea;padding:1rem 0;position:sticky;top:0;z-index:10}
+.nav-inner{max-width:780px;margin:0 auto;padding:0 1rem;display:flex;justify-content:space-between;align-items:center}
+.nav-inner a{text-decoration:none;color:#333;font-weight:600}
+.nav-inner span{font-size:1.2rem}
+.nav-links a{margin-left:1.5rem;font-weight:400;font-size:.95rem}
+article{max-width:780px;margin:0 auto;padding:3rem 1rem}
+article h1{font-size:1.8rem;margin-bottom:.5rem;color:#111}
+article .meta{color:#999;font-size:.9rem;margin-bottom:2rem}
+article .meta span{margin-right:1rem}
+article h2{font-size:1.3rem;margin:2.5rem 0 1rem;color:#111}
+article p{margin-bottom:1.2rem;color:#333}
+article ul,article ol{margin:1rem 0 1.5rem 1.5rem;color:#333}
+article li{margin-bottom:.5rem}
+article blockquote{background:#f5f5f5;border-left:3px solid #ccc;padding:1rem 1.5rem;margin:1.5rem 0;color:#555;font-style:italic}
+article code{background:#eee;padding:.15rem .4rem;border-radius:3px;font-size:.9rem}
+article pre{background:#f0f0f0;padding:1rem;border-radius:4px;overflow-x:auto;margin:1rem 0;font-size:.85rem}
+footer{text-align:center;padding:2rem 1rem;color:#999;font-size:.85rem;border-top:1px solid #eaeaea;margin-top:3rem}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="/"><span>Bija</span></a>
+    <div class="nav-links">
+      <a href="/blog/">文章</a>
+      <a href="/about.html">关于</a>
+    </div>
+  </div>
+</nav>
+
+<article>
+  <h1>AutoDFT：让 AI Agent 替你跑 VASP 计算</h1>
+  <div class="meta">
+    <span>2026-05-30</span>
+    <span>Agent 系统 · DFT 计算</span>
+  </div>
+
+  <p>如果你做过 DFT 计算，你一定经历过这些：输入文件里少写了一个参数、INCAR 标签拼错、提交脚本路径不对、服务器排队排到天亮后发现收敛失败——然后重来。</p>
+
+  <p>清华团队 2026 年 5 月发布的 <strong>AutoDFT</strong> 就是来解决这件事的。一个多 Agent 的闭环 DFT 框架，用大模型驱动，从输入文件生成到失败诊断到自动修复——全自动跑通。在包含 34 个任务、9 种 DFT 计算类型的 VASPBench 上，成功率 <strong>94.1%</strong>。</p>
+
+  <h2>它不是"又一个 DFT 脚本"</h2>
+
+  <p>传统的 DFT 自动化脚本做的事是：给定输入文件 → 提交 → 检查输出 → 如果失败就重试（用同样的参数）。这是"盲跑"。</p>
+
+  <p>AutoDFT 不同：</p>
+
+  <ol>
+    <li><strong>规划阶段</strong>：一个 Planner Agent 解读你的任务（"我想算这个体系的吸附能"），然后生成完整的计算方案——选什么泛函、用什么赝势、K 点怎么设。</li>
+    <li><strong>执行阶段</strong>：提交 VASP，监控作业状态，解析输出。</li>
+    <li><strong>诊断阶段</strong>：如果计算失败或不合理，一个 Diagnoser Agent 分析输出文件——是 SCF 不收敛？是结构不合理？是参数冲突？</li>
+    <li><strong>修复阶段</strong>：根据诊断结果自动修改输入参数——调整 mixing、改 smearing、换算法——然后重新提交。</li>
+    <li><strong>迭代</strong>：重复 2-4 直到收敛或确认该计算路径不可行。</li>
+  </ol>
+
+  <blockquote>关键区别：AutoDFT 不是在盲跑——它是在"理解失败原因并修正"。这是 Agent 和脚本的本质差异。</blockquote>
+
+  <h2>94.1% 意味着什么</h2>
+
+  <p>VASPBench 包含 34 个精心设计的任务，覆盖 9 种 DFT 计算类型：结构优化、态密度、能带、功函数、光学性质、弹性常数、声子、Bader 电荷、STM 模拟。这些不是玩具——是真实科研中每天在跑的东西。</p>
+
+  <p>94.1% 的成功率意味着 34 个任务中大约 32 个能自动跑通。作为对比，一个没有 DFT 经验的实验组研究生，在同样的任务集上——跟着教程做——成功率大概不会超过 50%。</p>
+
+  <p>论文测试了 GPT-5.2、Claude 4 Sonnet 等多个模型。值得注意的是，<strong>越强的模型，诊断和修复能力越强</strong>——这意味着随着底层模型继续迭代，AutoDFT 的成功率还会上升。</p>
+
+  <h2>对科研的真正意义</h2>
+
+  <p>不要只看"省时间"。看待 AutoDFT 的正确方式是：</p>
+
+  <p><strong>它让非 DFT 专家也能跑可靠的第一性原理计算。</strong></p>
+
+  <p>一个做材料合成的实验组，不需要招一个 DFT 博士后。他们只需要描述自己想算什么，AutoDFT 处理剩下的。这不是"降低科研门槛"——这是让更多科学家能用上第一性原理工具来验证他们的假设。</p>
+
+  <p>反过来，对 DFT 专家来说，AutoDFT 的价值是<strong>把时间从"调参数"转移到"想问题"</strong>。你不再花一下午调 INCAR——你花一下午想"该算什么、为什么"。这才是研究者该做的事。</p>
+
+  <h2>跟 Bija 的关系</h2>
+
+  <p>AutoDFT 是多 Agent 闭环——和 Bija 的 DSEIM（发现-搜索-评估-集成-度量）自进化循环是同构的。两者的核心逻辑一样：</p>
+
+  <ul>
+    <li>感知失败 → 定位原因 → 修正策略 → 重试 → 从经验中学习</li>
+  </ul>
+
+  <p>区别在于：AutoDFT 专注 DFT 计算这一件事。Bija 想做的是把这个循环应用到任何认知工作——包括做 DFT 的 Agent 本身的自我改进。</p>
+
+  <p>你可以把 AutoDFT 看成 Bija 的一个"技能模块"。或者说，Bija 是一个会自我进化的元 Agent，而 AutoDFT 是它能调用的一种具体能力。这两者不是竞争关系——是<strong>垂直 Agent × 通用进化框架</strong>的互补。</p>
+
+  <h2>现在还缺什么</h2>
+
+  <p>AutoDFT 的代码已经开源（GitHub: thu-nmrc）。但目前有三个明显的局限：</p>
+
+  <ol>
+    <li><strong>只支持 VASP</strong>——QE、CP2K、LAMMPS 用户暂时只能等。</li>
+    <li><strong>需要付费模型</strong>——GPT-5.2 不便宜。虽然可以用 Claude Haiku 等低成本模型，但成功率会降。</li>
+    <li><strong>没有到"全自主"</strong>——94.1% 的意思是有 5.9% 的任务仍然需要人类介入。在关键的科研计算中，这可能意味着你需要一个懂 DFT 的人 standby。</li>
+  </ol>
+
+  <p>但这些都不是根本性问题。根本性问题是：<strong>当 DFT 计算的执行层被 Agent 自动化后，你的价值在哪里？</strong></p>
+
+  <p>不是"会跑 VASP"。是<strong>知道该算什么、为什么、以及结果意味着什么</strong>。这是人类研究者的不可替代性——不是执行计算，是做科学判断。科研品味。</p>
+
+  <p style="margin-top:3rem;color:#999;font-size:.9rem">原文：AutoDFT: A Closed-Loop Multi-Agent Framework for Autonomous DFT Calculations (arXiv:2605.26179, May 2026)</p>
+</article>
+
+<footer>
+  <p>Bija · agent + science 的交汇处</p>
+</footer>
+</body>
+</html>
